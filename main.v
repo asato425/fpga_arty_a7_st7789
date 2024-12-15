@@ -43,9 +43,44 @@ module m_main(
     always @(posedge w_clk) r_st_we    <= 1; 
     always @(posedge w_clk) r_st_wdata <= (r_x<r_d && r_y<r_d) ? 16'hffff : 
                                           (r_x<r_y) ? 16'b11111100000 : 16'b11111;
+    //reg [15:0] r_adr_p = 0;
+    //reg [15:0] r_dat_p = 0;
+    //reg [15:0] vmem [0:65535]; // video memory, 256 x 256 (65,536) x 16bit color
+    //always @(posedge w_clk) if(r_st_we) begin
+     //   if(vmem[r_st_wadr]!=r_st_wdata) begin
+     //       r_adr_p <= r_st_wadr;
+     //       r_dat_p <= r_st_wdata;
+     //       $write("@D%0d_%0d\n", r_st_wadr ^ r_adr_p, r_st_wdata ^ r_dat_p);
+     //       $fflush();
+     //       vmem[r_st_wadr] <= r_st_wdata;
+     //   end
+    //end
+    wire [15:0] r_rdata = 0;
+    VMem vmem0 (w_clk, r_st_wadr, r_st_wdata, r_st_we, r_rdata);
+    
+    wire [1:0]  w_mode = w_button[0] + w_button[1] + w_button[2] + w_button[3];
+    wire [15:0] w_raddr;
+    //reg [15:0] r_rdata = 0;
+    reg [15:0] r_raddr = 0;
+    always @(posedge w_clk) r_raddr <= w_raddr;
+    //always @(posedge w_clk) r_rdata <= vmem[r_raddr];
+    m_st7789_disp disp0 (w_clk, st7789_SDA, st7789_SCL, st7789_DC, st7789_RES,
+                         w_raddr, r_rdata, w_mode);
+endmodule
+
+module VMem (
+    input  wire        w_clk,        // クロック信号
+    input  wire [15:0] r_st_wadr,       // アドレス入力
+    input  wire [15:0] r_st_wdata,      // 書き込みデータ
+    input  wire        r_st_we,         // 書き込みイネーブル
+    output reg  [15:0] rdata       // 読み出しデータ
+);
+	
     reg [15:0] r_adr_p = 0;
     reg [15:0] r_dat_p = 0;
-    reg [15:0] vmem [0:65535]; // video memory, 256 x 256 (65,536) x 16bit color
+    // メモリの定義（256x256, 16ビット）
+    reg [15:0] vmem [0:65535];
+
     always @(posedge w_clk) if(r_st_we) begin
         if(vmem[r_st_wadr]!=r_st_wdata) begin
             r_adr_p <= r_st_wadr;
@@ -53,17 +88,9 @@ module m_main(
             $write("@D%0d_%0d\n", r_st_wadr ^ r_adr_p, r_st_wdata ^ r_dat_p);
             $fflush();
             vmem[r_st_wadr] <= r_st_wdata;
+            rdata <= vmem[r_st_wadr];
         end
     end
-    
-    wire [1:0]  w_mode = w_button[0] + w_button[1] + w_button[2] + w_button[3];
-    wire [15:0] w_raddr;
-    reg [15:0] r_rdata = 0;
-    reg [15:0] r_raddr = 0;
-    always @(posedge w_clk) r_raddr <= w_raddr;
-    always @(posedge w_clk) r_rdata <= vmem[r_raddr];
-    m_st7789_disp disp0 (w_clk, st7789_SDA, st7789_SCL, st7789_DC, st7789_RES,
-                         w_raddr, r_rdata, w_mode);
 endmodule
 
 /*********************************************************************************************/
